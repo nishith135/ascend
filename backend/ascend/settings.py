@@ -11,7 +11,7 @@ SECRET_KEY = 'django-insecure-ascend-dev-key-change-in-production'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.29.132']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -109,7 +109,8 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS — allow React dev server
+# CORS — allow React dev server (local + network)
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'http://192.168.29.132:3000',
 ]
