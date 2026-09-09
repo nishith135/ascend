@@ -10,6 +10,7 @@ import TemplatesPage from './pages/TemplatesPage';
 import ActiveWorkoutPage from './pages/ActiveWorkoutPage';
 import HistoryPage from './pages/HistoryPage';
 import AchievementsPage from './pages/AchievementsPage';
+import CoachPage from './pages/CoachPage';
 import ShaderBackground from './components/ShaderBackground';
 import SystemToastContainer from './components/SystemToastContainer';
 import LevelUpOverlay from './components/LevelUpOverlay';
@@ -88,11 +89,12 @@ function BottomNavBar() {
         <NavLink to="/templates" className={({ isActive }) => `flex flex-col items-center justify-center transition-all duration-300 ${isActive ? 'bg-primary-container/20 text-primary-container rounded-full p-3 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'text-outline p-3 hover:text-primary active:scale-90'}`}>
           <span className="material-symbols-outlined">bolt</span>
         </NavLink>
+        {/* AI Coach — Phase 3 */}
+        <NavLink to="/coach" className={({ isActive }) => `flex flex-col items-center justify-center transition-all duration-300 ${isActive ? 'bg-primary-container/20 text-primary-container rounded-full p-3 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'text-outline p-3 hover:text-primary active:scale-90'}`}>
+          <span className="material-symbols-outlined">psychology</span>
+        </NavLink>
         <NavLink to="/achievements" className={({ isActive }) => `flex flex-col items-center justify-center transition-all duration-300 ${isActive ? 'bg-primary-container/20 text-primary-container rounded-full p-3 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'text-outline p-3 hover:text-primary active:scale-90'}`}>
           <span className="material-symbols-outlined">military_tech</span>
-        </NavLink>
-        <NavLink to="/history" className={({ isActive }) => `flex flex-col items-center justify-center transition-all duration-300 ${isActive ? 'bg-primary-container/20 text-primary-container rounded-full p-3 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'text-outline p-3 hover:text-primary active:scale-90'}`}>
-          <span className="material-symbols-outlined">history</span>
         </NavLink>
       </div>
     </nav>
@@ -116,6 +118,7 @@ function AppLayout() {
           <Route path="/workout" element={<ActiveWorkoutPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
+          <Route path="/coach" element={<CoachPage />} />
         </Routes>
       </main>
 

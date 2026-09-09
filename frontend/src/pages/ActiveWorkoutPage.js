@@ -17,6 +17,12 @@ export default function ActiveWorkoutPage() {
   const [finishing, setFinishing] = useState(false);
   const [finished, setFinished] = useState(false);
 
+  // ─── AI Quick-Log state ───────────────────────────────────────────────────
+  const [showAiLog, setShowAiLog] = useState(false);
+  const [aiLogText, setAiLogText] = useState('');
+  const [aiLogLoading, setAiLogLoading] = useState(false);
+  const [aiLogError, setAiLogError] = useState(null);
+
   const [workoutExercises, setWorkoutExercises] = useState([]);
   const [restTime, setRestTime] = useState(0);
   const [showRest, setShowRest] = useState(false);
@@ -215,6 +221,80 @@ export default function ActiveWorkoutPage() {
     setRestTime(0);
   };
 
+  // ─── AI Quick-Log handler ─────────────────────────────────────────────────
+  /**
+   * Parse free-text via the AI endpoint, then fuzzy-match exercise names
+   * against the loaded exercise library and add them to the workout.
+   */
+  const handleAiLog = async () => {
+    if (!aiLogText.trim()) return;
+    setAiLogLoading(true);
+    setAiLogError(null);
+
+    // Make sure we have the exercise library loaded for matching
+    let exercises = allExercises;
+    if (exercises.length === 0) {
+      try {
+        const data = await api.getExercises({ page_size: 200 });
+        exercises = data.results || data;
+        setAllExercises(exercises);
+      } catch {
+        // Continue even if library load fails — we'll still show parsed data
+      }
+    }
+
+    try {
+      const parsed = await api.parseWorkout(aiLogText);
+      const parsedExercises = parsed.exercises || [];
+
+      if (parsedExercises.length === 0) {
+        setAiLogError('The System could not extract any exercises. Try being more specific.');
+        return;
+      }
+
+      parsedExercises.forEach(parsedEx => {
+        // Fuzzy-match: find the best exercise in the library by name similarity
+        const nameLower = parsedEx.exercise_name.toLowerCase();
+        const matched = exercises.find(ex =>
+          ex.name.toLowerCase().includes(nameLower) ||
+          nameLower.includes(ex.name.toLowerCase())
+        );
+
+        const exerciseId = matched?.id || null;
+        const exerciseName = matched?.name || parsedEx.exercise_name;
+        const exerciseStat = matched?.default_stat || 'STR';
+
+        // Skip if already added
+        if (exerciseId && workoutExercises.find(e => e.exerciseId === exerciseId)) return;
+
+        // Build pending sets from the parsed data
+        const pendingSets = parsedEx.sets.map(s => ({
+          reps: s.reps != null ? String(s.reps) : '',
+          weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
+        }));
+
+        setWorkoutExercises(prev => [
+          ...prev,
+          {
+            exerciseId,
+            exerciseName,
+            exerciseStat,
+            loggedSets: [],
+            pendingSets: pendingSets.length > 0 ? pendingSets : [{ reps: '', weight_kg: '' }],
+          },
+        ]);
+      });
+
+      setShowAiLog(false);
+      setAiLogText('');
+      notify({ type: 'system', message: `[System] ${parsedExercises.length} exercise(s) loaded via AI parsing` });
+    } catch (err) {
+      setAiLogError(err.data?.detail || err.message || 'AI parsing failed. Try again.');
+    } finally {
+      setAiLogLoading(false);
+    }
+  };
+
   const totalLoggedSets = workoutExercises.reduce((acc, ex) => acc + ex.loggedSets.length, 0);
 
   const handleFinish = async () => {
@@ -327,6 +407,14 @@ export default function ActiveWorkoutPage() {
         <div className="flex gap-2">
           <button className="bg-surface-container hover:bg-surface-variant text-on-surface p-2 rounded transition-colors" onClick={openExercisePicker}>
             <span className="material-symbols-outlined text-sm">add</span>
+          </button>
+          {/* AI Quick-Log button */}
+          <button
+            className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 p-2 rounded transition-colors"
+            onClick={() => { setShowAiLog(true); setAiLogError(null); }}
+            title="Log workout via AI"
+          >
+            <span className="material-symbols-outlined text-sm">auto_awesome</span>
           </button>
           <button
             className="monarch-btn px-4 py-2 rounded font-label-system text-[10px] uppercase tracking-wider disabled:opacity-50"
@@ -458,6 +546,88 @@ export default function ActiveWorkoutPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Quick-Log Modal */}
+      {showAiLog && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center p-4"
+          onClick={() => setShowAiLog(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl rounded-b-xl overflow-hidden shadow-2xl"
+            style={{
+              background: 'linear-gradient(160deg, rgba(10,14,26,0.98) 0%, rgba(15,20,40,0.98) 100%)',
+              border: '1px solid rgba(225,29,72,0.25)',
+              boxShadow: '0 0 40px rgba(225,29,72,0.1)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 pt-5 pb-3 border-b border-primary/10">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                  <span className="font-label-system text-primary tracking-widest uppercase text-xs">AI Quick-Log</span>
+                </div>
+                <button className="text-on-surface-variant" onClick={() => setShowAiLog(false)}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <p className="font-body-main text-[11px] text-on-surface-variant mt-2 leading-relaxed">
+                Describe your workout in plain English. The System will parse it into sets.
+              </p>
+            </div>
+
+            {/* Input */}
+            <div className="px-5 py-4">
+              <textarea
+                id="ai-log-input"
+                value={aiLogText}
+                onChange={e => setAiLogText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleAiLog(); }}
+                placeholder={'e.g. "3 sets bench press 80kg 10 reps, then 4 sets of squats 100kg 8 reps"'}
+                rows={4}
+                disabled={aiLogLoading}
+                className="w-full rounded-xl p-3 text-sm font-body-main resize-none outline-none disabled:opacity-50"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(225,29,72,0.2)',
+                  color: 'rgba(220,230,255,0.9)',
+                }}
+                autoFocus
+              />
+
+              {aiLogError && (
+                <div className="mt-2 text-[11px] font-body-main text-red-400/80 px-1">
+                  ⚠ {aiLogError}
+                </div>
+              )}
+
+              <button
+                id="ai-log-submit"
+                onClick={handleAiLog}
+                disabled={!aiLogText.trim() || aiLogLoading}
+                className="mt-3 w-full monarch-btn py-3 rounded-xl font-label-system text-xs uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {aiLogLoading ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                    Parse Workout
+                  </>
+                )}
+              </button>
+              <p className="font-label-system text-[8px] text-on-surface-variant/40 tracking-wider text-center mt-2">
+                CTRL+ENTER to submit
+              </p>
             </div>
           </div>
         </div>

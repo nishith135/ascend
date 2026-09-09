@@ -2,6 +2,7 @@
 Django settings for ascend project.
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     'exercises',
     'workouts',
     'gamification',
+    'ai',
 ]
 
 MIDDLEWARE = [
@@ -114,3 +116,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://192.168.29.132:3000',
 ]
+
+# ─── AI / Anthropic ───────────────────────────────────────────────────────────
+# Set ANTHROPIC_API_KEY in your environment (or a backend/.env file loaded via
+# python-dotenv) — never commit the key to version control.
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')

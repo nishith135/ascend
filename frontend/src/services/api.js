@@ -223,6 +223,43 @@ class ApiService {
   async getAchievements() {
     return this.request('/gamification/achievements/');
   }
+
+  // ─── AI Features ───────────────────────────────────────────────────────────
+
+  /**
+   * Parse a natural-language workout description into structured set data.
+   * @param {string} text  e.g. "3 sets bench press 80kg 10 reps"
+   * @returns {{ exercises: Array<{ exercise_name: string, sets: Array<{ reps, weight_kg, duration_seconds }> }> }}
+   */
+  async parseWorkout(text) {
+    return this.request('/ai/parse-workout/', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  /**
+   * Generate AI-written Solo Leveling-style quest copy tailored to the user's stats.
+   * @returns {{ quests: Array<{ title, description, flavor, xp_reward }> }}
+   */
+  async generateQuests() {
+    return this.request('/ai/quest-generate/', {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Send a message to the AI Coach and get a reply.
+   * The caller maintains message history in state and passes the full array each time.
+   * @param {Array<{ role: 'user'|'assistant', content: string }>} messages
+   * @returns {{ reply: string, tools_used: string[] }}
+   */
+  async chatCoach(messages) {
+    return this.request('/ai/coach/', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
+    });
+  }
 }
 
 const api = new ApiService();
