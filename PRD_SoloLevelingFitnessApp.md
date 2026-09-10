@@ -73,8 +73,12 @@ Reference feel: think of the anime's blue system panels, the stat allocation scr
 - Achievements/Titles page — badge collection grid
 
 ### 4.6 Nutrition (lightweight MVP)
-- Simple daily log: calories + macros (manual entry or quick-add presets)
+- Simple daily log: calories + macros
+- **Manual entry form** — name, calories, protein/carbs/fats — no external dependency, close this gap before moving past current build
+- **Personal food library** — manually-entered foods save to a reusable "My Foods" list for 1-tap re-logging (this, not database search, is what makes day-to-day logging fast)
+- Quick-add presets (shake, meal, etc.) remain as fast-path shortcuts on top of the above, not the only entry method
 - Water intake tracker styled as a "Mana/Stamina" bar
+- **Phase 3 addition:** food database search API (Open Food Facts / Nutritionix / Edamam) and natural-language food logging (reuses the same LLM parsing pattern as NL workout logging)
 
 ### 4.7 Social (lightweight MVP)
 - Friends list, weekly XP leaderboard ("Guild Ranking")

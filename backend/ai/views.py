@@ -5,10 +5,12 @@ Three AI-powered endpoints:
   POST /api/ai/parse-workout/    — Natural-language → structured set logs
   POST /api/ai/quest-generate/   — Generate personalized quest flavour text
   POST /api/ai/coach/            — Stateful AI Coach chat with tool access
+
+All endpoints route through ai/client.py, supporting Anthropic, Groq, OpenAI,
+or any OpenAI-compatible provider seamlessly.
 """
 
 import json
-import anthropic
 
 from django.conf import settings
 from rest_framework.views import APIView
@@ -16,16 +18,21 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .tools import COACH_TOOLS, execute_tool
+from .client import simple_chat, run_agentic_loop
 
 
-def _get_client():
-    """Return a configured Anthropic client, raising clearly if key is missing."""
-    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise ValueError(
-            "ANTHROPIC_API_KEY is not set. Add it to your environment or backend/.env file."
-        )
-    return anthropic.Anthropic(api_key=api_key)
+def _clean_json_response(raw: str):
+    """Strip markdown code blocks if the model outputs them, then parse JSON."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        # Split on triple backticks and get the inner content
+        parts = raw.split("```")
+        if len(parts) >= 2:
+            raw = parts[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+    return json.loads(raw)
 
 
 # ─── Natural-Language Workout Parser ──────────────────────────────────────────
@@ -37,7 +44,7 @@ class ParseWorkoutView(APIView):
     Body: { "text": "3 sets of bench press at 80kg, 10 reps each. Also did 4 sets of squats 100kg 8 reps" }
     Returns: { "exercises": [ { "exercise_name": "...", "sets": [...] } ] }
 
-    Uses Claude to parse free-text workout descriptions into structured data
+    Uses AI to parse free-text workout descriptions into structured data
     that the frontend can use to auto-fill the active workout logging rows.
     """
 
@@ -76,23 +83,12 @@ class ParseWorkoutView(APIView):
         )
 
         try:
-            client = _get_client()
-            message = client.messages.create(
-                model="claude-haiku-4-5",
-                max_tokens=1024,
-                system=system_prompt,
+            raw_text = simple_chat(
                 messages=[{"role": "user", "content": text}],
+                system=system_prompt,
+                max_tokens=1024,
             )
-
-            raw = message.content[0].text.strip()
-            # Strip markdown code fences if Claude wraps the JSON
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
-
-            parsed = json.loads(raw)
+            parsed = _clean_json_response(raw_text)
             return Response(parsed)
 
         except ValueError as exc:
@@ -154,22 +150,12 @@ class QuestGenerateView(APIView):
         )
 
         try:
-            client = _get_client()
-            message = client.messages.create(
-                model="claude-haiku-4-5",
-                max_tokens=800,
-                system=system_prompt,
+            raw_text = simple_chat(
                 messages=[{"role": "user", "content": context}],
+                system=system_prompt,
+                max_tokens=800,
             )
-
-            raw = message.content[0].text.strip()
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
-
-            parsed = json.loads(raw)
+            parsed = _clean_json_response(raw_text)
             return Response(parsed)
 
         except ValueError as exc:
@@ -202,9 +188,9 @@ class CoachView(APIView):
 
     Returns: { "reply": "...", "tools_used": ["get_hunter_profile", ...] }
 
-    Runs an agentic loop: Claude can call tools (get_hunter_profile, get_recent_sessions,
-    get_today_quests, get_exercise_library) and we execute them server-side before
-    returning the final text reply. The frontend maintains message history in state.
+    Runs an agentic loop: the configured AI model can call tools (get_hunter_profile,
+    get_recent_sessions, get_today_quests, get_exercise_library) and we execute them
+    server-side before returning the final text reply.
     """
 
     SYSTEM_PROMPT = (
@@ -236,65 +222,20 @@ class CoachView(APIView):
                 )
 
         try:
-            client = _get_client()
+            reply_text, tools_used = run_agentic_loop(
+                messages=messages,
+                system=self.SYSTEM_PROMPT,
+                tools=COACH_TOOLS,
+                tool_executor=lambda name, inp: execute_tool(name, inp, request.user),
+                max_tokens=1024,
+            )
+            return Response({
+                "reply": reply_text.strip(),
+                "tools_used": tools_used,
+            })
+
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        tools_used = []
-
-        try:
-            # Agentic loop: keep calling Claude until it stops requesting tool calls
-            current_messages = list(messages)
-
-            while True:
-                response = client.messages.create(
-                    model="claude-haiku-4-5",
-                    max_tokens=1024,
-                    system=self.SYSTEM_PROMPT,
-                    tools=COACH_TOOLS,
-                    messages=current_messages,
-                )
-
-                # If Claude wants to use tools, execute them and continue
-                if response.stop_reason == "tool_use":
-                    # Append Claude's response (which contains tool_use blocks) to messages
-                    current_messages.append({
-                        "role": "assistant",
-                        "content": response.content,
-                    })
-
-                    # Process each tool call and build tool_result blocks
-                    tool_results = []
-                    for block in response.content:
-                        if block.type == "tool_use":
-                            tools_used.append(block.name)
-                            result = execute_tool(block.name, block.input, request.user)
-                            tool_results.append({
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps(result),
-                            })
-
-                    # Feed tool results back to Claude
-                    current_messages.append({
-                        "role": "user",
-                        "content": tool_results,
-                    })
-                    # Loop continues — Claude will now formulate its final reply
-
-                else:
-                    # Claude is done (stop_reason == "end_turn" or similar)
-                    # Extract the text reply
-                    reply_text = ""
-                    for block in response.content:
-                        if hasattr(block, "text"):
-                            reply_text += block.text
-
-                    return Response({
-                        "reply": reply_text.strip(),
-                        "tools_used": list(set(tools_used)),
-                    })
-
         except Exception as exc:
             return Response(
                 {"detail": f"AI service error: {str(exc)}"},

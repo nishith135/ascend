@@ -31,12 +31,10 @@ class LoginView(APIView):
         user = authenticate(request, username=identifier, password=password)
 
         # If that failed, check if identifier looks like an email and look up the username
-        if user is None and '@' in identifier:
-            try:
-                matched = User.objects.get(email__iexact=identifier)
+        if user is None:
+            matched = User.objects.filter(email__iexact=identifier).first()
+            if matched:
                 user = authenticate(request, username=matched.username, password=password)
-            except User.DoesNotExist:
-                pass
 
         if user is None:
             return Response(

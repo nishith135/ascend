@@ -53,12 +53,34 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* Demo Account Quick Fill Button */}
+        <div className="bg-surface-container-lowest/40 border border-primary/20 rounded-lg p-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] font-label-system">
+            <span className="text-primary flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">terminal</span>
+              TEST HUNTER ACCOUNT
+            </span>
+            <span className="text-on-surface-variant/60 font-mono text-[10px]">C-RANK // LVL 5</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setForm({ username: 'hunter@ascend.com', password: 'Password123!' });
+              setError('');
+            }}
+            className="w-full py-2 px-3 rounded bg-monarch-crimson/15 hover:bg-monarch-crimson/25 border border-monarch-crimson/40 text-monarch-crimson transition-all font-label-system text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+            Auto-Fill Credentials (hunter@ascend.com)
+          </button>
+        </div>
+
         {/* Form Section */}
         <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-          {/* ID/Username Input */}
+          {/* ID/Username/Email Input */}
           <div className="flex flex-col gap-2">
             <label className="font-label-system text-[10px] text-primary uppercase flex justify-between" htmlFor="hunter-id">
-              <span>Hunter ID / Designation</span>
+              <span>Email or Hunter Name</span>
               <span className="text-on-surface-variant/50">[REQ]</span>
             </label>
             <div className="relative">
@@ -68,7 +90,7 @@ export default function LoginPage() {
                 type="text" 
                 required 
                 autoComplete="username" 
-                placeholder="e.g. S-RANK-001" 
+                placeholder="hunter@ascend.com or hunter" 
                 className="hud-input w-full bg-surface-container-lowest/50 rounded pl-10 pr-4 py-3 font-body-main text-sm text-primary-fixed placeholder:text-outline-variant focus:ring-0 focus:border-monarch-crimson transition-colors"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}

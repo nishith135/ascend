@@ -260,6 +260,64 @@ class ApiService {
       body: JSON.stringify({ messages }),
     });
   }
+
+  // ─── Nutrition (Mana & Fuel) ───────────────────────────────────────────────
+
+  async getTodayNutrition() {
+    return this.request('/nutrition/today/');
+  }
+
+  async updateTodayNutrition(data) {
+    return this.request('/nutrition/today/', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async quickLogNutrition(deltas) {
+    return this.request('/nutrition/quick-add/', {
+      method: 'POST',
+      body: JSON.stringify(deltas),
+    });
+  }
+
+  async getNutritionHistory(days = 7) {
+    return this.request(`/nutrition/history/?days=${days}`);
+  }
+
+  // ─── Social & Guild ────────────────────────────────────────────────────────
+
+  async getLeaderboard(scope = 'global', timeframe = 'weekly') {
+    return this.request(`/social/leaderboard/?scope=${scope}&timeframe=${timeframe}`);
+  }
+
+  async getFriends() {
+    return this.request('/social/friends/');
+  }
+
+  async sendFriendRequest(username) {
+    return this.request('/social/friends/request/', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+  }
+
+  async respondFriendRequest(friendshipId, action) {
+    return this.request('/social/friends/respond/', {
+      method: 'POST',
+      body: JSON.stringify({ friendship_id: friendshipId, action }),
+    });
+  }
+
+  async removeFriend(userId) {
+    return this.request(`/social/friends/${userId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async searchUsers(query) {
+    return this.request(`/social/users/search/?q=${encodeURIComponent(query)}`);
+  }
 }
 
 const api = new ApiService();

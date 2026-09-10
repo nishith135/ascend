@@ -8,6 +8,16 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Automatically load backend/.env if present
+_env_path = BASE_DIR / '.env'
+if _env_path.exists():
+    with open(_env_path, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+
 SECRET_KEY = 'django-insecure-ascend-dev-key-change-in-production'
 
 DEBUG = True
@@ -30,6 +40,8 @@ INSTALLED_APPS = [
     'workouts',
     'gamification',
     'ai',
+    'nutrition',
+    'social',
 ]
 
 MIDDLEWARE = [
@@ -117,7 +129,39 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.29.132:3000',
 ]
 
-# ─── AI / Anthropic ───────────────────────────────────────────────────────────
-# Set ANTHROPIC_API_KEY in your environment (or a backend/.env file loaded via
-# python-dotenv) — never commit the key to version control.
+# ─── AI Configuration ──────────────────────────────────────────────────────────
+# AI_PROVIDER: 'anthropic' or 'openai' (covers Google Gemini, Groq, OpenAI, etc.)
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY') or GEMINI_API_KEY or GROQ_API_KEY
+
+AI_PROVIDER = os.environ.get(
+    'AI_PROVIDER',
+    'openai' if (OPENAI_API_KEY or GEMINI_API_KEY or GROQ_API_KEY) else 'anthropic'
+)
+
+# Optional model override. Defaults per provider/service:
+# - Gemini: gemini-1.5-flash
+# - Groq:   llama-3.3-70b-versatile
+# - OpenAI: gpt-4o-mini
+# - Claude: claude-haiku-4-5
+AI_MODEL = os.environ.get('AI_MODEL', '')
+
+# OpenAI-compatible Base URL auto-detection:
+_default_base_url = None
+if GEMINI_API_KEY:
+    _default_base_url = 'https://generativelanguage.googleapis.com/v1beta/openai/'
+elif GROQ_API_KEY:
+    _default_base_url = 'https://api.groq.com/openai/v1'
+
+OPENAI_BASE_URL = os.environ.get('OPENAI_BASE_URL', _default_base_url)
+
+# ─── Celery Configuration ──────────────────────────────────────────────────────
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
