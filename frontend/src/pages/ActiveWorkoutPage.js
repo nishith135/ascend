@@ -601,6 +601,24 @@ export default function ActiveWorkoutPage() {
                 autoFocus
               />
 
+              {/* Quick Preset Chips */}
+              <div className="flex gap-1.5 flex-wrap mt-2">
+                {[
+                  "3 sets bench press 80kg 10 reps",
+                  "4 sets squats 100kg 8 reps and 3 sets pullups",
+                  "3 sets overhead press 40kg 10 reps",
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setAiLogText(preset)}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary-container border border-primary/20 transition-colors truncate max-w-full"
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
+
               {aiLogError && (
                 <div className="mt-2 text-[11px] font-body-main text-red-400/80 px-1">
                   ⚠ {aiLogError}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSystemNotification } from '../context/SystemNotificationContext';
 import api from '../services/api';
 
 const RANK_COLORS = {
@@ -18,9 +19,34 @@ const QUEST_TYPE_COLORS = {
 
 export default function DashboardPage() {
   const { user, refreshProfile } = useAuth();
+  const { notify } = useSystemNotification();
   const [stats, setStats] = useState(null);
   const [quests, setQuests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [aiQuests, setAiQuests] = useState([]);
+  const [generatingAiQuests, setGeneratingAiQuests] = useState(false);
+
+  const handleSummonAiQuests = async () => {
+    setGeneratingAiQuests(true);
+    try {
+      const res = await api.generateQuests();
+      if (res && res.quests) {
+        setAiQuests(res.quests);
+        notify({
+          type: 'quest',
+          message: `[System Directive] Generated ${res.quests.length} specialized trial directives!`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to generate AI quests:', err);
+      notify({
+        type: 'system',
+        message: 'System calibration timed out. Try again.',
+      });
+    } finally {
+      setGeneratingAiQuests(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -167,10 +193,53 @@ export default function DashboardPage() {
                 Active Quests
               </h3>
             </div>
-            {totalQuests > 0 && (
-              <span className="text-xs font-mono text-on-surface-variant">{completedQuests}/{totalQuests} done</span>
-            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSummonAiQuests}
+                disabled={generatingAiQuests}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 font-label-system text-[9px] tracking-wider uppercase transition-all duration-200 active:scale-95 disabled:opacity-50 shadow-[0_0_10px_rgba(225,29,72,0.2)]"
+                title="Summon personalized AI quest directives"
+              >
+                <span className={`material-symbols-outlined text-[11px] ${generatingAiQuests ? 'animate-spin' : ''}`}>
+                  {generatingAiQuests ? 'sync' : 'auto_awesome'}
+                </span>
+                {generatingAiQuests ? 'SCANNING...' : 'AI LORE'}
+              </button>
+              {totalQuests > 0 && (
+                <span className="text-xs font-mono text-on-surface-variant">{completedQuests}/{totalQuests}</span>
+              )}
+            </div>
           </div>
+
+          {/* AI Lore Directives Panel */}
+          {aiQuests.length > 0 && (
+            <div className="mb-4 p-3 rounded-lg bg-surface-container/60 border border-primary/30 shadow-[0_0_15px_rgba(225,29,72,0.15)] animate-in">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-label-system text-[9px] text-primary tracking-widest uppercase flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px]">psychology</span>
+                  [SYSTEM DIRECTIVE // CALIBRATED]
+                </span>
+                <button
+                  onClick={() => setAiQuests([])}
+                  className="text-on-surface-variant hover:text-on-surface text-[10px]"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-2">
+                {aiQuests.map((aq, idx) => (
+                  <div key={idx} className="p-2 rounded bg-surface/80 border border-primary/20 text-left">
+                    <div className="flex justify-between items-start">
+                      <span className="font-label-system text-xs text-primary font-bold">{aq.title}</span>
+                      <span className="text-[10px] font-mono text-emerald-400">+{aq.xp_reward} XP</span>
+                    </div>
+                    <p className="text-[11px] text-on-surface mt-1">{aq.description}</p>
+                    <p className="text-[10px] text-primary-container/80 italic mt-1 font-mono">"{aq.flavor}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {activeQuests.length === 0 && (
             <p className="text-on-surface-variant text-sm italic text-center py-2">

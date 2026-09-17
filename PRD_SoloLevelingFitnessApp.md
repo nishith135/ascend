@@ -136,32 +136,20 @@ Pick based on time budget — ordered roughly by effort:
 
 ---
 
-## 9. Suggested Build Phases (for prompting in stages if one-shot gets too large)
+## 9. Suggested Build Phases (Restructured)
 
-1. **Phase 1 — Core loop:** Auth, exercise library, workout logging, basic dashboard with stats/XP/level (no AI yet)
+1. **Phase 1 — Core loop:** Auth, exercise library, workout logging, basic dashboard with stats/XP/level (no AI)
 2. **Phase 2 — Gamification polish:** System-style notifications, rank-up animations, quests, achievements
-3. **Phase 3 — AI layer:** Natural-language logging, AI Coach chat with tool access, AI-generated quest copy
-4. **Phase 4 — Social + nutrition + stretch:** Leaderboards, nutrition tracking, Celery-based automation
-5. **Phase 5 — Computer vision (future):** Pose-based rep counting and rule-based form feedback for a small set of core exercises (see Section 11). Reference "correct form" demo videos are cheap enough to fold into the Phase 1 exercise library directly and don't need to wait for this phase.
+3. **Phase 3 — Social & Nutrition:** Leaderboards, manual nutrition tracking, personal food library, Celery automation
+4. **Phase 4 — AI layer (Capstone):** Natural-language workout logging, AI Coach chat with tool access into DRF endpoints, dynamic AI quest generator
+
+*(Note: Computer Vision / pose estimation has been excluded from scope to prioritize performance, security, and a responsive web experience.)*
 
 ---
 
-## 11. Future Feature: Computer Vision — Form Check & Rep Counting
-
-Not part of the MVP phases — captured here so the direction is documented without committing current scope to it.
-
-**Three sub-features, deliberately separated by difficulty:**
-
-1. **Reference form demo** (not CV — just content). A looping video/GIF per exercise showing correct execution, shown when an exercise is selected. Cheap enough to fold into the Phase 1 exercise library directly.
-2. **Rep counting** (medium difficulty). Client-side pose estimation via MediaPipe Pose Landmarker (WebAssembly, runs in-browser through the webcam via `getUserMedia`). Count reps by tracking a relevant joint angle (e.g. knee angle for squats) through peak-to-valley cycles. Scope to 3–5 core exercises first (squat, pushup, bicep curl, lunge), not the full library.
-3. **Form correctness feedback** (hardest). Rule-based angle-range checks per exercise ("knees not past toes," "back angle above X°") for the same small exercise set — not a general-purpose form-AI across the whole library. Accuracy depends heavily on camera angle, lighting, and occlusion; the app should disclose this rather than imply guaranteed correctness.
-
-**Architecture guidance:** Run pose estimation client-side in React (MediaPipe Tasks Vision). Do not stream raw video to the Django backend — it's costly, adds latency, and raises privacy concerns for workout footage. If anything is sent server-side, send only the extracted landmark coordinates, not video.
-
----
-
-## 12. Success Metrics (portfolio framing)
+## 10. Success Metrics (portfolio framing)
 
 - Working demo-able loop: sign up → log workout → see stat/XP/level update → get a quest → hit a rank-up animation
-- At least one AI feature with visible tool-calling into your own backend (strongest technical talking point in interviews)
-- Clean, cohesive visual theme carried across every screen (this is what makes the demo memorable)
+- Social & nutrition tracking: log meals/water, view rank on guild leaderboard, share Hunter Card
+- AI-powered capstone: Natural-language workout logging and System Coach with visible tool-calling into backend
+- Clean, cohesive Solo Leveling visual theme carried across every screen
