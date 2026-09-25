@@ -60,6 +60,15 @@ export default function ActiveWorkoutPage() {
           });
         });
         setWorkoutExercises(Object.values(groups));
+      } else if (location.state?.initialExercise) {
+        const initEx = location.state.initialExercise;
+        setWorkoutExercises([{
+          exerciseId: initEx.id,
+          exerciseName: initEx.name,
+          exerciseStat: initEx.default_stat || 'STR',
+          loggedSets: [],
+          pendingSets: [{ set_number: 1, reps: '', weight_kg: '', duration_seconds: '' }],
+        }]);
       }
     } catch (err) {
       console.error('Failed to start/load session:', err);
@@ -298,9 +307,32 @@ export default function ActiveWorkoutPage() {
   const totalLoggedSets = workoutExercises.reduce((acc, ex) => acc + ex.loggedSets.length, 0);
 
   const handleFinish = async () => {
-    if (!session || totalLoggedSets === 0) return;
+    if (!session || finishing) return;
     setFinishing(true);
+
     try {
+      // Auto-log any pending sets with entered reps (or default 10 if total sets is 0)
+      for (let exIdx = 0; exIdx < workoutExercises.length; exIdx++) {
+        const ex = workoutExercises[exIdx];
+        for (let setIdx = 0; setIdx < ex.pendingSets.length; setIdx++) {
+          const p = ex.pendingSets[setIdx];
+          const repsVal = p.reps ? parseInt(p.reps, 10) : (totalLoggedSets === 0 ? 10 : null);
+          if (repsVal && repsVal > 0) {
+            try {
+              await api.addSet(session.id, {
+                exercise: ex.exerciseId,
+                set_number: ex.loggedSets.length + setIdx + 1,
+                reps: repsVal,
+                weight_kg: p.weight_kg ? parseFloat(p.weight_kg) : null,
+                duration_seconds: p.duration_seconds ? parseInt(p.duration_seconds, 10) : null,
+              });
+            } catch (err) {
+              console.error('Auto-log pending set failed:', err);
+            }
+          }
+        }
+      }
+
       const result = await api.finishSession(session.id);
       setSession(result);
       setFinished(true);
@@ -419,7 +451,7 @@ export default function ActiveWorkoutPage() {
           <button
             className="monarch-btn px-4 py-2 rounded font-label-system text-[10px] uppercase tracking-wider disabled:opacity-50"
             onClick={handleFinish}
-            disabled={finishing || totalLoggedSets === 0}
+            disabled={finishing}
           >
             {finishing ? 'Finishing...' : `Complete`}
           </button>

@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+} from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { useSystemNotification } from '../context/SystemNotificationContext';
 import api from '../services/api';
@@ -182,8 +185,43 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* ── Stat Radar ── */}
+      <section className="glass-panel rounded-xl p-4 animate-in delay-200">
+        <div className="flex items-center gap-2 mb-3 border-b border-primary-container/20 pb-2">
+          <span className="material-symbols-outlined text-primary-container text-base">radar</span>
+          <h3 className="font-label-system text-label-system text-primary-container tracking-widest uppercase">Stat Radar</h3>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <RadarChart
+            data={[
+              { stat: 'STR', value: user.stat_str || 0 },
+              { stat: 'VIT', value: user.stat_vit || 0 },
+              { stat: 'AGI', value: user.stat_agi || 0 },
+              { stat: 'END', value: user.stat_end || 0 },
+              { stat: 'FLX', value: user.stat_flx || 0 },
+              { stat: 'PER', value: user.stat_per || 0 },
+            ]}
+            margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+          >
+            <PolarGrid stroke="rgba(225,29,72,0.15)" />
+            <PolarAngleAxis
+              dataKey="stat"
+              tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10, fontFamily: 'monospace', fontWeight: 'bold' }}
+            />
+            <Radar
+              dataKey="value"
+              stroke="#e11d48"
+              fill="rgba(225,29,72,0.25)"
+              strokeWidth={1.5}
+              dot={{ fill: '#e11d48', r: 3, strokeWidth: 0 }}
+              style={{ filter: 'drop-shadow(0 0 4px rgba(225,29,72,0.5))' }}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      </section>
+
       {/* ── Active Quests ── */}
-      <section className="rounded-xl p-4 bg-error-container/20 border pulse-border animate-in delay-200 relative overflow-hidden">
+      <section className="rounded-xl p-4 bg-error-container/20 border pulse-border animate-in delay-300 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(225,29,72,0.1),transparent)]"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-3">

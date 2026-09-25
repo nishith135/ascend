@@ -1,136 +1,121 @@
-"""
-Management command to seed the exercise library with ~80 common exercises.
-Run with: python manage.py seed_exercises
-"""
-
+import json
+from pathlib import Path
 from django.core.management.base import BaseCommand
 from exercises.models import Exercise
+from exercises.rules import compute_stats
 
 
-EXERCISES = [
-    # ── CHEST (STR) ──
-    {"name": "Barbell Bench Press", "muscle_group": "chest", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Incline Barbell Bench Press", "muscle_group": "chest", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Decline Barbell Bench Press", "muscle_group": "chest", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Dumbbell Bench Press", "muscle_group": "chest", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Incline Dumbbell Press", "muscle_group": "chest", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Dumbbell Fly", "muscle_group": "chest", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Cable Crossover", "muscle_group": "chest", "equipment": "cable", "default_stat": "STR"},
-    {"name": "Push-Up", "muscle_group": "chest", "equipment": "bodyweight", "default_stat": "STR"},
-    {"name": "Chest Dip", "muscle_group": "chest", "equipment": "bodyweight", "default_stat": "STR"},
-    {"name": "Machine Chest Press", "muscle_group": "chest", "equipment": "machine", "default_stat": "STR"},
+# Mapping primary muscle to legacy muscle_group choice for frontend/filter compatibility
+MUSCLE_TO_GROUP = {
+    'chest': 'chest',
+    'lats': 'back',
+    'middle back': 'back',
+    'lower back': 'back',
+    'traps': 'back',
+    'neck': 'back',
+    'shoulders': 'shoulders',
+    'biceps': 'arms',
+    'triceps': 'arms',
+    'forearms': 'arms',
+    'quadriceps': 'legs',
+    'hamstrings': 'legs',
+    'glutes': 'legs',
+    'calves': 'legs',
+    'abductors': 'legs',
+    'adductors': 'legs',
+    'abdominals': 'core',
+}
 
-    # ── BACK (STR) ──
-    {"name": "Barbell Deadlift", "muscle_group": "back", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Barbell Row", "muscle_group": "back", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Pull-Up", "muscle_group": "back", "equipment": "bodyweight", "default_stat": "STR"},
-    {"name": "Chin-Up", "muscle_group": "back", "equipment": "bodyweight", "default_stat": "STR"},
-    {"name": "Lat Pulldown", "muscle_group": "back", "equipment": "cable", "default_stat": "STR"},
-    {"name": "Seated Cable Row", "muscle_group": "back", "equipment": "cable", "default_stat": "STR"},
-    {"name": "Dumbbell Row", "muscle_group": "back", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "T-Bar Row", "muscle_group": "back", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Face Pull", "muscle_group": "back", "equipment": "cable", "default_stat": "STR"},
 
-    # ── SHOULDERS (STR) ──
-    {"name": "Overhead Press", "muscle_group": "shoulders", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Dumbbell Shoulder Press", "muscle_group": "shoulders", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Arnold Press", "muscle_group": "shoulders", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Lateral Raise", "muscle_group": "shoulders", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Front Raise", "muscle_group": "shoulders", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Rear Delt Fly", "muscle_group": "shoulders", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Upright Row", "muscle_group": "shoulders", "equipment": "barbell", "default_stat": "STR"},
-
-    # ── LEGS (STR) ──
-    {"name": "Barbell Squat", "muscle_group": "legs", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Front Squat", "muscle_group": "legs", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Leg Press", "muscle_group": "legs", "equipment": "machine", "default_stat": "STR"},
-    {"name": "Romanian Deadlift", "muscle_group": "legs", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Bulgarian Split Squat", "muscle_group": "legs", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Leg Extension", "muscle_group": "legs", "equipment": "machine", "default_stat": "STR"},
-    {"name": "Leg Curl", "muscle_group": "legs", "equipment": "machine", "default_stat": "STR"},
-    {"name": "Calf Raise", "muscle_group": "legs", "equipment": "machine", "default_stat": "STR"},
-    {"name": "Goblet Squat", "muscle_group": "legs", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Hip Thrust", "muscle_group": "legs", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Walking Lunge", "muscle_group": "legs", "equipment": "dumbbell", "default_stat": "STR"},
-
-    # ── ARMS (STR) ──
-    {"name": "Barbell Curl", "muscle_group": "arms", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Dumbbell Curl", "muscle_group": "arms", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Hammer Curl", "muscle_group": "arms", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Preacher Curl", "muscle_group": "arms", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Cable Curl", "muscle_group": "arms", "equipment": "cable", "default_stat": "STR"},
-    {"name": "Tricep Pushdown", "muscle_group": "arms", "equipment": "cable", "default_stat": "STR"},
-    {"name": "Skull Crusher", "muscle_group": "arms", "equipment": "barbell", "default_stat": "STR"},
-    {"name": "Overhead Tricep Extension", "muscle_group": "arms", "equipment": "dumbbell", "default_stat": "STR"},
-    {"name": "Tricep Dip", "muscle_group": "arms", "equipment": "bodyweight", "default_stat": "STR"},
-    {"name": "Concentration Curl", "muscle_group": "arms", "equipment": "dumbbell", "default_stat": "STR"},
-
-    # ── CORE (END) ──
-    {"name": "Plank", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Crunch", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Hanging Leg Raise", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Russian Twist", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Ab Rollout", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Cable Woodchop", "muscle_group": "core", "equipment": "cable", "default_stat": "END"},
-    {"name": "Mountain Climber", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-    {"name": "Dead Bug", "muscle_group": "core", "equipment": "bodyweight", "default_stat": "END"},
-
-    # ── FULL BODY (VIT) ──
-    {"name": "Burpee", "muscle_group": "full_body", "equipment": "bodyweight", "default_stat": "VIT"},
-    {"name": "Clean and Press", "muscle_group": "full_body", "equipment": "barbell", "default_stat": "VIT"},
-    {"name": "Kettlebell Swing", "muscle_group": "full_body", "equipment": "kettlebell", "default_stat": "VIT"},
-    {"name": "Thruster", "muscle_group": "full_body", "equipment": "barbell", "default_stat": "VIT"},
-    {"name": "Man Maker", "muscle_group": "full_body", "equipment": "dumbbell", "default_stat": "VIT"},
-    {"name": "Turkish Get-Up", "muscle_group": "full_body", "equipment": "kettlebell", "default_stat": "VIT"},
-    {"name": "Battle Ropes", "muscle_group": "full_body", "equipment": "none", "default_stat": "VIT"},
-
-    # ── CARDIO (AGI) ──
-    {"name": "Treadmill Running", "muscle_group": "cardio", "equipment": "cardio_machine", "default_stat": "AGI"},
-    {"name": "Outdoor Running", "muscle_group": "cardio", "equipment": "none", "default_stat": "AGI"},
-    {"name": "Cycling", "muscle_group": "cardio", "equipment": "cardio_machine", "default_stat": "AGI"},
-    {"name": "Rowing Machine", "muscle_group": "cardio", "equipment": "cardio_machine", "default_stat": "END"},
-    {"name": "Elliptical", "muscle_group": "cardio", "equipment": "cardio_machine", "default_stat": "AGI"},
-    {"name": "Jump Rope", "muscle_group": "cardio", "equipment": "none", "default_stat": "AGI"},
-    {"name": "Stair Climber", "muscle_group": "cardio", "equipment": "cardio_machine", "default_stat": "END"},
-    {"name": "Swimming", "muscle_group": "cardio", "equipment": "none", "default_stat": "END"},
-    {"name": "Sprints", "muscle_group": "cardio", "equipment": "none", "default_stat": "AGI"},
-    {"name": "Box Jump", "muscle_group": "cardio", "equipment": "bodyweight", "default_stat": "AGI"},
-
-    # ── FLEXIBILITY (FLX) ──
-    {"name": "Standing Hamstring Stretch", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Pigeon Pose", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Cat-Cow Stretch", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Downward Dog", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Foam Rolling", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Hip Flexor Stretch", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Shoulder Stretch", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Yoga Flow", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-    {"name": "Child's Pose", "muscle_group": "flexibility", "equipment": "none", "default_stat": "FLX"},
-]
+def resolve_muscle_group(category: str, primary_muscles: list) -> str:
+    cat = (category or '').strip().lower()
+    if cat == 'cardio':
+        return 'cardio'
+    if cat == 'stretching':
+        return 'flexibility'
+    if primary_muscles:
+        first = primary_muscles[0].strip().lower()
+        if first in MUSCLE_TO_GROUP:
+            return MUSCLE_TO_GROUP[first]
+    return 'full_body'
 
 
 class Command(BaseCommand):
-    help = 'Seeds the database with ~80 common exercises.'
+    help = 'Seeds or updates the Exercise library from backend/exercises/exercises.json'
 
     def handle(self, *args, **options):
-        created_count = 0
-        skipped_count = 0
+        # Locate exercises.json relative to the backend app root
+        json_path = Path(__file__).resolve().parents[2] / 'exercises.json'
+        if not json_path.exists():
+            self.stderr.write(self.style.ERROR(f"File not found: {json_path}"))
+            return
 
-        for ex_data in EXERCISES:
-            _, created = Exercise.objects.get_or_create(
-                name=ex_data['name'],
-                defaults={
-                    'muscle_group': ex_data['muscle_group'],
-                    'equipment': ex_data['equipment'],
-                    'default_stat': ex_data['default_stat'],
-                }
+        with open(json_path, 'r', encoding='utf-8') as f:
+            exercises_data = json.load(f)
+
+        created_count = 0
+        updated_count = 0
+
+        self.stdout.write(f"Processing {len(exercises_data)} exercises from {json_path.name}...")
+
+        for entry in exercises_data:
+            name = (entry.get('name') or '').strip()
+            if not name:
+                continue
+
+            # NOTE: We explicitly ignore entry.get('images') — exercise images are not used.
+
+            category = entry.get('category') or ''
+            force = entry.get('force')
+            mechanic = entry.get('mechanic')
+            level = entry.get('level')
+            equipment = entry.get('equipment') or 'none'
+            primary_muscles = entry.get('primaryMuscles') or []
+            secondary_muscles = entry.get('secondaryMuscles') or []
+            instructions = entry.get('instructions') or []
+
+            description = ' '.join(instructions) if isinstance(instructions, list) else str(instructions or '')
+
+            # Compute RPG stat multipliers using pure rule engine
+            stats = compute_stats(entry)
+
+            # Determine dominant default stat for backwards compatibility
+            dominant_stat = max(stats, key=stats.get) if any(v > 0 for v in stats.values()) else 'STR'
+            muscle_group = resolve_muscle_group(category, primary_muscles)
+
+            defaults = {
+                'force': force,
+                'mechanic': mechanic,
+                'category': category,
+                'level': level,
+                'equipment': equipment,
+                'muscle_group': muscle_group,
+                'primary_muscles': primary_muscles,
+                'secondary_muscles': secondary_muscles,
+                'instructions': instructions,
+                'description': description,
+                'stat_str': stats.get('STR', 0.0),
+                'stat_vit': stats.get('VIT', 0.0),
+                'stat_agi': stats.get('AGI', 0.0),
+                'stat_end': stats.get('END', 0.0),
+                'stat_flx': stats.get('FLX', 0.0),
+                'stat_per': stats.get('PER', 0.0),
+                'default_stat': dominant_stat,
+            }
+
+            _, created = Exercise.objects.update_or_create(
+                name=name,
+                defaults=defaults,
             )
+
             if created:
                 created_count += 1
             else:
-                skipped_count += 1
+                updated_count += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Seeded {created_count} exercises ({skipped_count} already existed). '
-            f'Total: {Exercise.objects.count()}'
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeding completed successfully: {created_count} created, "
+                f"{updated_count} updated (Total: {created_count + updated_count})."
+            )
+        )

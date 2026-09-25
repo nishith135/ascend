@@ -59,7 +59,7 @@ function PublicRoute({ children }) {
 function TopAppBar() {
   const { logout } = useAuth();
   return (
-    <header className="fixed top-0 w-full md:max-w-md z-50 backdrop-blur-xl bg-surface/40 border-b border-primary-container/20 shadow-[0_0_15px_rgba(225,29,72,0.2)]">
+    <header className="fixed top-0 left-0 right-0 w-full max-w-md mx-auto z-50 backdrop-blur-xl bg-surface/85 border-b border-primary-container/20 shadow-[0_0_15px_rgba(225,29,72,0.2)]">
       <div className="flex justify-between items-center px-gutter h-16">
         <button 
           onClick={logout}
@@ -85,7 +85,7 @@ function TopAppBar() {
 
 function BottomNavBar() {
   return (
-    <nav className="fixed bottom-0 w-full md:max-w-md z-50 backdrop-blur-md rounded-t-[20px] bg-surface-container/80 border-t border-primary-container/20 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto z-50 backdrop-blur-md rounded-t-[20px] bg-surface-container/90 border-t border-primary-container/20 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
       <div className="flex justify-around items-center px-3 py-2">
         <NavLink 
           to="/" 
@@ -149,7 +149,7 @@ function AppLayout() {
   const isWorkoutActive = location.pathname === '/workout';
 
   return (
-    <div className="relative z-10 flex flex-col min-h-screen md:max-w-md md:mx-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-surface-container-lowest/80 backdrop-blur-sm pb-24">
+    <div className="relative z-10 flex flex-col min-h-screen md:max-w-md md:mx-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-surface-container-lowest/80 pb-24">
       {!isWorkoutActive && <TopAppBar />}
       {!isWorkoutActive && <div className="h-20"></div>}
       

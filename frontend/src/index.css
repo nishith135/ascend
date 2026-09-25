@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Calendar heatmap base + Solo Leveling theme overrides ── */
+@import 'react-calendar-heatmap/dist/styles.css';
+
+.react-calendar-heatmap .color-empty { fill: rgba(255,255,255,0.06); }
+.react-calendar-heatmap .color-scale-1 { fill: rgba(225,29,72,0.25); }
+.react-calendar-heatmap .color-scale-2 { fill: rgba(225,29,72,0.50); }
+.react-calendar-heatmap .color-scale-3 { fill: rgba(225,29,72,0.75); }
+.react-calendar-heatmap .color-scale-4 { fill: rgba(225,29,72,1.00); filter: drop-shadow(0 0 4px rgba(225,29,72,0.7)); }
+.react-calendar-heatmap rect:hover { stroke: #e11d48; stroke-width: 1px; }
+
 @layer base {
   body {
     background-color: #050505;

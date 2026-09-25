@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 const RANK_BADGE_COLORS = {
   E: { bg: 'bg-slate-800', border: 'border-slate-500', text: 'text-slate-300', glow: 'rgba(148, 163, 184, 0.4)' },
-  D: { bg: 'bg-stone-800', border: 'border-stone-500', text: 'text-stone-300', glow: 'rgba(168, 162, 158, 0.4)' },
+  D: { bg: 'bg-stone-800', border: 'border-stone-500', text: 'text-stone-300', glow: 'rgba(168, 162, 184, 0.4)' },
   C: { bg: 'bg-emerald-950', border: 'border-emerald-500', text: 'text-emerald-400', glow: 'rgba(16, 185, 129, 0.5)' },
   B: { bg: 'bg-blue-950', border: 'border-blue-500', text: 'text-blue-400', glow: 'rgba(59, 130, 246, 0.5)' },
   A: { bg: 'bg-violet-950', border: 'border-violet-500', text: 'text-violet-400', glow: 'rgba(139, 92, 246, 0.6)' },
@@ -13,6 +13,21 @@ export default function HunterCardModal({ hunter, onClose }) {
   const cardRef = useRef(null);
   const [exporting, setExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = origOverflow;
+    };
+  }, [onClose]);
 
   if (!hunter) return null;
 
@@ -200,18 +215,28 @@ export default function HunterCardModal({ hunter, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="relative w-full max-w-md glass-panel rounded-2xl border border-primary-container/40 p-5 shadow-[0_0_30px_rgba(225,29,72,0.3)]">
         {/* Close button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-on-surface-variant hover:text-primary p-1.5 rounded-full hover:bg-primary-container/10 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          type="button"
+          aria-label="Close Hunter License"
+          className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-surface-container/90 border border-primary-container/40 flex items-center justify-center text-on-surface-variant hover:text-white hover:border-primary transition-all active:scale-95 shadow-md cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[20px]">close</span>
+          <span className="material-symbols-outlined text-[18px]">close</span>
         </button>
 
         {/* Card Preview */}
-        <div ref={cardRef} className="p-4 rounded-xl border-2 border-primary-container/60 bg-surface-container-lowest/90 relative overflow-hidden shadow-inner">
+        <div ref={cardRef} className="p-4 rounded-xl border-2 border-primary-container/60 bg-surface-container-lowest/90 relative overflow-hidden shadow-inner mt-2">
           <div className="scanlines absolute inset-0 pointer-events-none opacity-40"></div>
 
           <div className="flex justify-between items-center text-[10px] font-mono text-primary border-b border-primary-container/20 pb-2 mb-3">

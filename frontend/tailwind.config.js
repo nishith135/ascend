@@ -58,7 +58,28 @@ module.exports = {
           "inverse-on-surface": "#3f2b2c",
           "monarch-crimson": "#be123c",
           "on-background": "#fbdbdb",
-          "tertiary-fixed": "#90f5d9"
+          "tertiary-fixed": "#90f5d9",
+          "monarch": {
+            "void": "#070304",
+            "surface": "#120709",
+            "card": "#190a0d",
+            "cardElevated": "#240f13",
+            "crimson": "#e11d48",
+            "crimsonGlow": "#ff2a5f",
+            "roseBorder": "rgba(225, 29, 72, 0.35)",
+            "accentDim": "#4a1520",
+            "textPrimary": "#fcedef",
+            "textSecondary": "#a8868c",
+            "textMuted": "#664a50",
+            "manaCyan": "#38bdf8",
+            "statGold": "#fbbf24",
+            "strGreen": "#10b981"
+          }
+      },
+      "boxShadow": {
+        "crimson-glow": "0 0 15px -3px rgba(225, 29, 72, 0.35)",
+        "crimson-focus": "0 0 20px 2px rgba(225, 29, 72, 0.5)",
+        "inner-glow": "inset 0 0 12px rgba(225, 29, 72, 0.15)"
       },
       "borderRadius": {
           "DEFAULT": "0.125rem",
@@ -74,6 +95,8 @@ module.exports = {
           "margin-safe": "2rem"
       },
       "fontFamily": {
+          "display": ["Orbitron", "sans-serif"],
+          "sans": ["Sora", "sans-serif"],
           "body-main": ["Inter"],
           "stat-value": ["Sora"],
           "category-header": ["Sora"],
