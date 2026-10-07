@@ -25,25 +25,23 @@ export function AuthProvider({ children }) {
     }
   }, [fetchProfile]);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     await api.login(username, password);
     await fetchProfile();
-  };
+  }, [fetchProfile]);
 
-  const register = async (data) => {
+  const register = useCallback(async (data) => {
     const result = await api.register(data);
     setUser(result.profile);
     return result;
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     api.logout();
     setUser(null);
-  };
+  }, []);
 
-  const refreshProfile = async () => {
-    await fetchProfile();
-  };
+  const refreshProfile = fetchProfile;
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, refreshProfile }}>

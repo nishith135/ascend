@@ -79,11 +79,11 @@ WSGI_APPLICATION = 'ascend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ascend_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Giyu@123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'ascend_db'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ['DB_PASSWORD'],  # required — set in backend/.env
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -130,32 +130,11 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # ─── AI Configuration ──────────────────────────────────────────────────────────
-# AI_PROVIDER: 'anthropic' or 'openai' (covers Google Gemini, Groq, OpenAI, etc.)
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+# Gemini only (see ai/client.py). Key comes from backend/.env.
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY') or GEMINI_API_KEY or GROQ_API_KEY
 
-AI_PROVIDER = os.environ.get(
-    'AI_PROVIDER',
-    'openai' if (OPENAI_API_KEY or GEMINI_API_KEY or GROQ_API_KEY) else 'anthropic'
-)
-
-# Optional model override. Defaults per provider/service:
-# - Gemini: gemini-1.5-flash
-# - Groq:   llama-3.3-70b-versatile
-# - OpenAI: gpt-4o-mini
-# - Claude: claude-haiku-4-5
+# Optional model override; ai/client.py has the default.
 AI_MODEL = os.environ.get('AI_MODEL', '')
-
-# OpenAI-compatible Base URL auto-detection:
-_default_base_url = None
-if GEMINI_API_KEY:
-    _default_base_url = 'https://generativelanguage.googleapis.com/v1beta/openai/'
-elif GROQ_API_KEY:
-    _default_base_url = 'https://api.groq.com/openai/v1'
-
-OPENAI_BASE_URL = os.environ.get('OPENAI_BASE_URL', _default_base_url)
 
 # ─── Celery Configuration ──────────────────────────────────────────────────────
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')

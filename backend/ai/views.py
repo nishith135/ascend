@@ -11,6 +11,7 @@ or any OpenAI-compatible provider seamlessly.
 """
 
 import json
+import logging
 
 from django.conf import settings
 from rest_framework.views import APIView
@@ -19,6 +20,8 @@ from rest_framework import status
 
 from .tools import COACH_TOOLS, execute_tool
 from .client import simple_chat, run_agentic_loop
+
+logger = logging.getLogger(__name__)
 
 
 def _clean_json_response(raw: str):
@@ -292,6 +295,7 @@ class ParseWorkoutView(APIView):
             return Response(parsed)
 
         except Exception:
+            logger.exception("AI parse-workout failed; using fallback parser")
             # Fallback to local regex heuristic parser
             fallback_parsed = _fallback_parse_workout(text)
             if fallback_parsed.get("exercises"):
@@ -346,6 +350,7 @@ class QuestGenerateView(APIView):
             return Response(parsed)
 
         except Exception:
+            logger.exception("AI quest-generate failed; using fallback generator")
             # Fallback to rich Solo Leveling lore generator
             return Response(_fallback_generate_quests(user))
 
@@ -392,6 +397,7 @@ class CoachView(APIView):
             })
 
         except Exception:
+            logger.exception("AI coach failed; using fallback coach")
             reply_text, tools_used = _fallback_coach_chat(request.user, messages)
             return Response({
                 "reply": reply_text,
