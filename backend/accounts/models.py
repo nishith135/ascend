@@ -82,13 +82,18 @@ class UserProfile(models.Model):
 
     def add_xp(self, amount):
         """Add XP and handle level-ups and rank promotions."""
+        if not amount or amount <= 0:
+            return False
+
         self.xp += amount
         leveled_up = False
 
-        # Check for level-ups (can level up multiple times)
-        while self.xp_progress >= self.xp_for_next_level:
+        # Check for level-ups with an iteration cap to prevent CPU exhaustion
+        iterations = 0
+        while self.xp_progress >= self.xp_for_next_level and iterations < 100:
             self.level += 1
             leveled_up = True
+            iterations += 1
 
         # Update rank based on level thresholds
         new_rank = 'E'

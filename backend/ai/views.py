@@ -251,12 +251,18 @@ class ParseWorkoutView(APIView):
     POST /api/ai/parse-workout/
     Body: { "text": "3 sets of bench press at 80kg, 10 reps each." }
     """
+    throttle_scope = 'ai'
 
     def post(self, request):
         text = request.data.get("text", "").strip()
         if not text:
             return Response(
                 {"detail": "No workout text provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(text) > 2000:
+            return Response(
+                {"detail": "Workout description exceeds maximum allowed length (2000 characters)."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -312,6 +318,7 @@ class QuestGenerateView(APIView):
     """
     POST /api/ai/quest-generate/
     """
+    throttle_scope = 'ai'
 
     def post(self, request):
         user = request.user
@@ -361,6 +368,7 @@ class CoachView(APIView):
     """
     POST /api/ai/coach/
     """
+    throttle_scope = 'ai'
 
     SYSTEM_PROMPT = (
         "You are The System — the omniscient AI interface from Solo Leveling. "
@@ -376,10 +384,21 @@ class CoachView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if len(messages) > 20:
+            return Response(
+                {"detail": "Conversation too long. Maximum 20 messages allowed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         for msg in messages:
             if msg.get("role") not in ("user", "assistant"):
                 return Response(
                     {"detail": "Invalid message role. Must be 'user' or 'assistant'."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(str(msg.get("content", ""))) > 2000:
+                return Response(
+                    {"detail": "Message content exceeds maximum allowed length (2000 characters)."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

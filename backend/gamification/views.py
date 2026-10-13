@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics, status
+from django.db import transaction
 from django.utils import timezone
 from django.utils.timezone import make_aware
 from datetime import date, datetime, timedelta
@@ -91,22 +92,23 @@ class QuestCompleteView(APIView):
     """
 
     def post(self, request, pk):
-        try:
-            quest = Quest.objects.get(pk=pk, user=request.user, status='active')
-        except Quest.DoesNotExist:
-            return Response({'detail': 'Quest not found or already completed.'}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            try:
+                quest = Quest.objects.select_for_update().get(pk=pk, user=request.user, status='active')
+            except Quest.DoesNotExist:
+                return Response({'detail': 'Quest not found or already completed.'}, status=status.HTTP_404_NOT_FOUND)
 
-        quest.goal_current = quest.goal_target
-        quest.status = 'completed'
-        quest.completed_at = timezone.now()
-        quest.save()
+            quest.goal_current = quest.goal_target
+            quest.status = 'completed'
+            quest.completed_at = timezone.now()
+            quest.save()
 
-        # Award XP
-        profile = request.user.profile
-        leveled_up = profile.add_xp(quest.xp_reward)
+            # Award XP
+            profile = request.user.profile
+            leveled_up = profile.add_xp(quest.xp_reward)
 
-        # Check achievements
-        newly_unlocked = check_and_unlock_achievements(request.user)
+            # Check achievements
+            newly_unlocked = check_and_unlock_achievements(request.user)
 
         return Response({
             'quest': QuestSerializer(quest).data,

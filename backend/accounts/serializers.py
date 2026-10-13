@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from .models import UserProfile
 
 
@@ -57,6 +58,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+
+        # Enforce Django password strength policy
+        user_candidate = User(username=data.get('username'), email=data.get('email'))
+        validate_password(data['password'], user=user_candidate)
+
         return data
 
     def validate_email(self, value):

@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import transaction
 from django.db.models import Sum, Count, F
 from django.utils import timezone
 from datetime import timedelta
@@ -97,18 +98,19 @@ class SessionFinishView(APIView):
     """PATCH /api/workouts/sessions/{id}/finish/ — Mark session as complete, calculate XP, check achievements."""
 
     def patch(self, request, pk):
-        try:
-            session = WorkoutSession.objects.get(pk=pk, user=request.user)
-        except WorkoutSession.DoesNotExist:
-            return Response(
-                {"detail": "Session not found."}, status=status.HTTP_404_NOT_FOUND
-            )
+        with transaction.atomic():
+            try:
+                session = WorkoutSession.objects.select_for_update().get(pk=pk, user=request.user)
+            except WorkoutSession.DoesNotExist:
+                return Response(
+                    {"detail": "Session not found."}, status=status.HTTP_404_NOT_FOUND
+                )
 
-        serializer = WorkoutSessionFinishSerializer(
-            session, data=request.data, partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        session = serializer.update(session, serializer.validated_data)
+            serializer = WorkoutSessionFinishSerializer(
+                session, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            session = serializer.update(session, serializer.validated_data)
 
         from gamification.serializers import UserAchievementSerializer
 

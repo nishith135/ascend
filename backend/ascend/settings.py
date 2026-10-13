@@ -5,6 +5,7 @@ Django settings for ascend project.
 import os
 from pathlib import Path
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,11 +19,17 @@ if _env_path.exists():
                 _k, _v = _line.split('=', 1)
                 os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
 
-SECRET_KEY = 'django-insecure-ascend-dev-key-change-in-production'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-ascend-dev-key-change-in-production')
+if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith('django-insecure-')):
+    raise ImproperlyConfigured("A secure SECRET_KEY environment variable is required in production.")
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.29.132']
+_allowed_hosts = os.environ.get('ALLOWED_HOSTS')
+if _allowed_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()]
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.29.132']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -111,6 +118,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth': '10/minute',
+        'ai': '20/minute',
+    },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
@@ -124,10 +142,23 @@ SIMPLE_JWT = {
 }
 
 # CORS — allow React dev server (local + network)
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://192.168.29.132:3000',
-]
+_cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS')
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',
+        'http://192.168.29.132:3000',
+    ]
+
+# ─── Production Security Headers ───────────────────────────────────────────────
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', 31536000))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # ─── AI Configuration ──────────────────────────────────────────────────────────
 # Gemini only (see ai/client.py). Key comes from backend/.env.

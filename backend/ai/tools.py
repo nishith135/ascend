@@ -202,8 +202,8 @@ def _get_exercise_library(tool_input: dict, user) -> dict:
     exercises = [
         {
             "name": ex.name,
-            "muscle_group": ex.get_muscle_group_display(),
-            "equipment": ex.get_equipment_display(),
+            "muscle_group": (ex.muscle_group or '').title(),
+            "equipment": (ex.equipment or '').title(),
             "primary_stat": ex.default_stat,
         }
         for ex in qs[:50]  # cap at 50 to keep context manageable

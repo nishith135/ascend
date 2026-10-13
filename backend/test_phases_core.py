@@ -91,8 +91,11 @@ force_authenticate(req, user=user)
 res = TodayQuestsView.as_view()(req)
 assert res.status_code == 200
 assert len(res.data) > 0
-active_quest = res.data[0]
-print(f"[OK] Quests retrieved: {len(res.data)} daily/weekly quests. First: {active_quest['title']}")
+active_quest = next((q for q in res.data if q['status'] == 'active'), None)
+if not active_quest:
+    Quest.objects.filter(id=res.data[0]['id']).update(status='active', goal_current=0)
+    active_quest = res.data[0]
+print(f"[OK] Quests retrieved: {len(res.data)} daily/weekly quests. Testing with active: {active_quest['title']}")
 
 # Complete Quest
 req = factory.post(f"/api/gamification/quests/{active_quest['id']}/complete/")

@@ -16,6 +16,7 @@ class LoginView(APIView):
     Returns JWT access + refresh tokens plus the full profile.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth'
 
     def post(self, request):
         identifier = request.data.get('username', '').strip()
@@ -57,6 +58,7 @@ class RegisterView(generics.CreateAPIView):
 
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

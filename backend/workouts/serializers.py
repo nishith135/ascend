@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from django.utils import timezone
 from django.db.models import Sum, F
@@ -84,6 +85,13 @@ class SetLogSerializer(serializers.ModelSerializer):
 class SetLogCreateSerializer(serializers.ModelSerializer):
     """Write serializer for creating a set log within a session."""
 
+    reps = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=500)
+    weight_kg = serializers.DecimalField(
+        required=False, allow_null=True, max_digits=7, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('1000')
+    )
+    duration_seconds = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=86400)
+    set_number = serializers.IntegerField(min_value=1, max_value=100)
+
     class Meta:
         model = SetLog
         fields = ['exercise', 'set_number', 'reps', 'weight_kg', 'duration_seconds']
@@ -161,6 +169,9 @@ class WorkoutSessionFinishSerializer(serializers.Serializer):
             total=Sum('duration_seconds')
         )['total'] or 0
         xp += int(total_duration / 60)
+
+        # Cap max XP per session for anti-abuse safety
+        xp = min(xp, 5000)
 
         instance.xp_earned = xp
         instance.save()
