@@ -47,3 +47,24 @@ class NutritionLog(models.Model):
         if not self.calorie_target:
             return 0
         return min(int((self.calories / self.calorie_target) * 100), 100)
+
+class FoodItem(models.Model):
+    fdc_id = models.IntegerField(unique=True)
+    name = models.CharField(max_length=500)
+    source = models.CharField(max_length=50)
+
+    # all values are per 100g; NULL means "USDA has no recorded value"
+    calories_kcal = models.FloatField(null=True, blank=True)
+    protein_g = models.FloatField(null=True, blank=True)
+    fat_g = models.FloatField(null=True, blank=True)
+    carbs_g = models.FloatField(null=True, blank=True)
+    fiber_g = models.FloatField(null=True, blank=True)
+    sugars_g = models.FloatField(null=True, blank=True)
+    sodium_mg = models.FloatField(null=True, blank=True)
+    calcium_mg = models.FloatField(null=True, blank=True)
+    iron_mg = models.FloatField(null=True, blank=True)
+    potassium_mg = models.FloatField(null=True, blank=True)
+    vitamin_c_mg = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
